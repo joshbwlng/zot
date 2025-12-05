@@ -1024,8 +1024,8 @@ func (rh *RouteHandler) CheckBlob(response http.ResponseWriter, request *http.Re
 
 /* parseRangeHeader validates the "Range" HTTP header and returns the range. */
 func parseRangeHeader(contentRange string) (int64, int64, error) {
-	/* bytes=<start>- and bytes=<start>-<end> formats are supported */
-	pattern := `bytes=(?P<rangeFrom>\d+)-(?P<rangeTo>\d*$)`
+	/* bytes=<start>-, bytes=<start>-<end>, and bytes=-<suffix> formats are supported */
+	pattern := `^bytes=(?P<rangeFrom>\d*)-(?P<rangeTo>\d*)$`
 
 	regex, err := regexp.Compile(pattern)
 	if err != nil {
@@ -1047,6 +1047,19 @@ func parseRangeHeader(contentRange string) (int64, int64, error) {
 	to := int64(-1)
 
 	rangeFrom := paramsMap["rangeFrom"]
+	rangeTo := paramsMap["rangeTo"]
+
+	// Handle suffix-byte-range-spec: bytes=-<suffix>
+	if rangeFrom == "" && rangeTo != "" {
+		if to, err = strconv.ParseInt(rangeTo, 10, 64); err != nil {
+			return -1, -1, zerr.ErrParsingHTTPHeader
+		}
+
+		// Return negative from value to indicate suffix range
+		return -to, -1, nil
+	}
+
+	// Handle byte-range-spec: bytes=<start>- or bytes=<start>-<end>
 	if rangeFrom == "" {
 		return -1, -1, zerr.ErrParsingHTTPHeader
 	}
@@ -1055,7 +1068,6 @@ func parseRangeHeader(contentRange string) (int64, int64, error) {
 		return -1, -1, zerr.ErrParsingHTTPHeader
 	}
 
-	rangeTo := paramsMap["rangeTo"]
 	if rangeTo != "" {
 		if to, err = strconv.ParseInt(rangeTo, 10, 64); err != nil {
 			return -1, -1, zerr.ErrParsingHTTPHeader

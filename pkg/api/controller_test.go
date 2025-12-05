@@ -11413,6 +11413,10 @@ func TestPullRange(t *testing.T) {
 			So(resp.StatusCode(), ShouldEqual, http.StatusPartialContent)
 			So(resp.Header().Get("Content-Length"), ShouldEqual, "2")
 			So(resp.Body(), ShouldResemble, content[2:4])
+
+			resp, err = resty.R().SetHeader("Range", "bytes=-0").Get(blobLoc)
+			So(err, ShouldBeNil)
+			So(resp.StatusCode(), ShouldEqual, http.StatusPartialContent)
 		})
 
 		Convey("Negative cases", func() {
@@ -11449,10 +11453,6 @@ func TestPullRange(t *testing.T) {
 			So(resp.StatusCode(), ShouldEqual, http.StatusRequestedRangeNotSatisfiable)
 
 			resp, err = resty.R().SetHeader("Range", "octet=-0").Get(blobLoc)
-			So(err, ShouldBeNil)
-			So(resp.StatusCode(), ShouldEqual, http.StatusRequestedRangeNotSatisfiable)
-
-			resp, err = resty.R().SetHeader("Range", "bytes=-0").Get(blobLoc)
 			So(err, ShouldBeNil)
 			So(resp.StatusCode(), ShouldEqual, http.StatusRequestedRangeNotSatisfiable)
 
